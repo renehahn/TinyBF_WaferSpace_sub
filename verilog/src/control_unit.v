@@ -137,7 +137,17 @@ module control_unit #(
     // Note: Jumps are PC-relative (not PC+1 relative), this means offset=-1 goes back one instruction
     // Sign-extend arg5 (5 bits) to ADDR_W+1 bits for signed arithmetic
     // For ADDR_W=5: extends 5-bit arg5 to 6-bit signed value
-    wire signed [ADDR_W:0] arg_signed = $signed({{(ADDR_W+1-5){arg5[4]}}, arg5});
+    // For ADDR_W<5: truncate arg5 to ADDR_W bits, then sign-extend
+    wire signed [ADDR_W:0] arg_signed;
+    generate
+        if (ADDR_W >= 5) begin : gen_pc_full_arg
+            // Use full 5-bit argument, sign-extend to ADDR_W+1 bits
+            assign arg_signed = $signed({{(ADDR_W+1-5){arg5[4]}}, arg5});
+        end else begin : gen_pc_truncate_arg
+            // Truncate to ADDR_W bits, sign-extend from truncated MSB to ADDR_W+1 bits
+            assign arg_signed = $signed({arg5[ADDR_W-1], arg5[ADDR_W-1:0]});
+        end
+    endgenerate
     wire signed [ADDR_W:0] pc_ext = $signed({1'b0, pc});
     /* verilator lint_off UNUSEDSIGNAL */
     wire signed [ADDR_W:0] pc_plus1 = pc_ext + 1;  // MSB unused (overflow intentionally discarded)
