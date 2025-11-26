@@ -12,7 +12,7 @@
 		"dir::../verilog/src/programmer.v",
 		"dir::../verilog/src/reset_sync.v"
 	],
-	"DIE_AREA": "0 0 400 300",
+	"DIE_AREA": "0 0 350 300",
 	"PNR_SDC_FILE": "dir::impl.sdc",
     "SIGNOFF_SDC_FILE": "dir::signoff.sdc",
     "IO_PIN_ORDER_CFG": "dir::pin_order.cfg",
@@ -31,7 +31,7 @@
 
 	"//": "PL_TARGET_DENSITY_PCT - You can increase this if Global Placement fails with error GPL-0302.",
 	"//": "Users have reported that values up to 80 worked well for them.",
-	"PL_TARGET_DENSITY_PCT": 65,
+	"PL_TARGET_DENSITY_PCT": 73,
 
 	"//": "CLOCK_PERIOD - Increase this in case you are getting setup time violations.",
 	"//": "The value is in nanoseconds, so 20ns == 50MHz.",
