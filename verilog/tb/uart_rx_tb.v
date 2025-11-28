@@ -1,7 +1,7 @@
 //=============================================================================
 // uart_rx_tb.v - TinyBF UART Receiver Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     1.0
@@ -14,9 +14,9 @@
 module uart_rx_tb;
 
     // Testbench parameters
-    parameter CLK_PERIOD = 20;      // 20ns = 50MHz
-    parameter BAUD_PERIOD = 8680;   // 115200 baud period in ns (1/115200 = 8.68µs)
-    parameter BIT_PERIOD = 434;     // Baud period in clock cycles (8680ns / 20ns)
+    parameter CLK_PERIOD = 40;      // 40ns = 25MHz
+    parameter BAUD_PERIOD = 8320;   // 115200 baud period in ns at 25MHz (13*16*40ns)
+    parameter BIT_PERIOD = 208;     // Baud period in clock cycles (13*16)
 
     // DUT signals
     reg         clk;
@@ -60,7 +60,7 @@ module uart_rx_tb;
             baud_counter_16x <= 16'd0;
             baud_tick_16x <= 1'b0;
         end else begin
-            if (baud_counter_16x == 16'd26) begin  // ~115200*16 at 50MHz
+            if (baud_counter_16x == 16'd12) begin  // ~115200*16 at 25MHz (25M/(115200*16)≈13.56)
                 baud_counter_16x <= 16'd0;
                 baud_tick_16x <= 1'b1;
             end else begin
@@ -708,7 +708,7 @@ module uart_rx_tb;
             wait_for_rx_valid();
             @(posedge clk);
             
-            // Should receive correctly despite glitches
+            // Receive despite glitches
             check_data("Glitch rejection", rx_data, test_byte);
             
             $display("  -> Verify robust reception despite noise\n");

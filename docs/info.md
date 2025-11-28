@@ -1,12 +1,12 @@
 ## How it works
 
-TinyBF is a complete hardware implementation of a Brainfuck interpreter designed for ASIC fabrication through Tiny Tapeout. The design is a fully functional CPU with integrated UART I/O, programmable RAM-based storage, and a UART-based program uploader.
+TinyBF is a complete hardware implementation of a Brainfuck interpreter designed for ASIC fabrication through the wafer.space GF180 tapeout. The design is a fully functional CPU with integrated UART I/O, programmable RAM-based storage, and a UART-based program uploader.
 
 ### Architecture
 
 The system consists of six main components:
 
-1. **Control Unit** - An 11-state finite state machine (FSM) that serves as the CPU core. It fetches instructions, decodes them, and orchestrates all operations including memory access and I/O. The FSM uses one-hot encoding for optimal gate count.
+1. **Control Unit** - An 11-state finite state machine (FSM) that serves as the CPU core. It fetches instructions, decodes them, and orchestrates all operations including memory access and I/O.
 
 2. **Program Memory (RAM)** - 32×8-bit dual-port RAM for instruction storage. Each instruction is encoded as an 8-bit value: 3 bits for the opcode and 5 bits for a signed argument (enabling optimizations like `+5` instead of five separate `+` instructions). Programs can be uploaded via UART using the programmer module.
 
@@ -115,13 +115,12 @@ The program RAM implements write-first semantics: simultaneous read and write to
 
 5. **Monitor Execution**: 
    - Watch `CPU_BUSY/PROG_BUSY` (`uo[1]`) to see when the system is active
-   - Observe the program counter on `{uio[7:6], uo[7:2]}` (full 7-bit address, 0-127)
-   - Monitor the data pointer on `uio[5:0]` (6-bit address, 0-63)
-   - Track cell values by reading tape memory (not visible on pins in current design)
+   - Observe the program counter on `uo[6:2]` (5-bit address, 0-31)
+   - Monitor the data pointer on `uio[3:0]` (4-bit address, 0-15)
 
 6. **UART Communication** (with default program):
    - Ensure PROG_MODE (`ui[3]`) is low (execution mode)
-   - Connect a UART terminal to `ui[0]` (RX) and `uo[0]` (TX) at 38400 baud, 8N1 format
+   - Connect a UART terminal to `ui[0]` (RX) and `uo[0]` (TX) at 115200 baud, 8N1 format
    - Send lowercase characters like `"abc"` followed by null terminator (0x00)
    - You should receive uppercase output `"ABC\n"`
    - The default program demonstrates interactive UART I/O with both `,` (input) and `.` (output) commands
@@ -134,7 +133,7 @@ The program RAM implements write-first semantics: simultaneous read and write to
 - UART controller for serial communication
   - Connect TinyBF's TX (`uo[0]`) to converter's RX
   - Connect TinyBF's RX (`ui[0]`) to converter's TX
-  - Configure terminal software for 38400 baud, 8 data bits, no parity, 1 stop bit (8N1)
+  - Configure terminal software for 115200 baud, 8 data bits, no parity, 1 stop bit (8N1)
 
 **Optional:**
 - Logic analyzer or oscilloscope to monitor debug outputs (program counter, data pointer, cell values)

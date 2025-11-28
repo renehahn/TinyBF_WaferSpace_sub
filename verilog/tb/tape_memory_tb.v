@@ -1,7 +1,7 @@
 //=============================================================================
 // tape_memory_tb.v - TinyBF Tape Memory Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     1.0
@@ -17,7 +17,7 @@ module tape_memory_tb;
     parameter CELL_W = 8;
     parameter DEPTH = 8;
     parameter ADDR_W = $clog2(DEPTH);
-    parameter CLK_PERIOD = 20;
+    parameter CLK_PERIOD = 40;
 
     // DUT signals
     reg                 clk;
@@ -263,7 +263,7 @@ module tape_memory_tb;
             @(posedge clk);
             @(negedge clk);
             
-            // After 1 cycle, data should be available
+            // Data available after 1 cycle
             check_rdata("Read latency: 1 cycle", 8'hAB);
             
             $display("  -> Verify 1-cycle read latency\n");
@@ -289,7 +289,7 @@ module tape_memory_tb;
             
             // Test write-to-read dependency
             write_cell(3'd4, 8'h88);
-            @(posedge clk);
+            wait_cycles(1);  // Wait for write to complete
             read_cell(3'd4);
             wait_cycles(1);
             check_rdata("Write latency: sequential W->R", 8'h88);
@@ -313,7 +313,7 @@ module tape_memory_tb;
             wait_cycles(1);
             check_rdata("ren deassert: initial read", 8'hCC);
             
-            // Deassert ren - rdata should hold value
+            // Deassert ren - rdata holds value
             ren = 1'b0;
             wait_cycles(1);
             check_rdata("ren deassert: after 1 cycle", 8'hCC);
@@ -877,21 +877,24 @@ module tape_memory_tb;
             write_cell(3'd1, 8'hEE);
             wait_cycles(1);
             
+            // Deassert write enable before reset
+            wen = 1'b0;
+            @(posedge clk);
+            
             // Assert reset
             rst_n = 1'b0;
             wait_cycles(2);
             rst_n = 1'b1;
             wait_cycles(1);
             
-            // Memory should retain data (reset only affects control logic if any)
-            // Note: This memory has no reset-dependent control, data persists
+            // Memory should clear on reset (synchronous reset clears all cells)
             read_cell(3'd0);
             wait_cycles(1);
-            check_rdata("Reset: data persists cell 0", 8'hDD);
+            check_rdata("Reset: data cleared cell 0", 8'h00);
             
             read_cell(3'd1);
             wait_cycles(1);
-            check_rdata("Reset: data persists cell 1", 8'hEE);
+            check_rdata("Reset: data cleared cell 1", 8'h00);
             
             $display("  -> Verify reset behavior\n");
         end

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Wed Nov 26 19:04:32 2025
+[*] Fri Nov 28 16:54:56 2025
 [*]
-[dumpfile] "/foss/designs/TinyBF/tb/results/bf_top_tb.vcd"
-[dumpfile_mtime] "Wed Nov 26 18:12:27 2025"
-[dumpfile_size] 4722070
-[savefile] "/foss/designs/TinyBF/tb/gtkw/bf_top.gtkw"
-[timestart] 1574935000
+[dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/bf_top_tb.vcd"
+[dumpfile_mtime] "Fri Nov 28 16:54:39 2025"
+[dumpfile_size] 2374125
+[savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/bf_top.gtkw"
+[timestart] 1399500000
 [size] 1920 1043
 [pos] -1 -1
-*-19.074202 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-27.074358 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -42,19 +42,18 @@
 [signals_width] 250
 [sst_expanded] 1
 [sst_vpaned_height] 304
-@200
--
 @420
 bf_top_tb.test_num
 @28
 bf_top_tb.clk
 bf_top_tb.dut.prog_mode_i
 @200
+-
 -CPU
-@23
+@22
 bf_top_tb.dut.u_cpu.pc[4:0]
 @2028
-^1 /foss/designs/TinyBF/tb/gtkw/state_translate.txt
+^1 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/state_translate.txt
 bf_top_tb.dut.u_cpu.state[3:0]
 @28
 bf_top_tb.dut.u_cpu.rst_i
@@ -62,7 +61,7 @@ bf_top_tb.dut.u_cpu.start_run_i
 @22
 bf_top_tb.dut.u_cpu.instr_reg[7:0]
 @2028
-^2 /foss/designs/TinyBF/tb/gtkw/opcode_translate.txt
+^2 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/opcode_translate.txt
 bf_top_tb.dut.u_cpu.opcode[2:0]
 @420
 bf_top_tb.dut.u_cpu.arg5[4:0]
@@ -89,7 +88,7 @@ bf_top_tb.dut.u_cpu.tape_wen_o
 @28
 [color] 2
 bf_top_tb.dut.u_uart_tx.tx_serial_o
-bf_top_tb.dut.u_uart_tx.state[1:0]
+bf_top_tb.dut.u_uart_tx.state[2:0]
 @22
 bf_top_tb.dut.u_uart_tx.tx_data_i[7:0]
 bf_top_tb.dut.u_uart_tx.shift_reg[7:0]

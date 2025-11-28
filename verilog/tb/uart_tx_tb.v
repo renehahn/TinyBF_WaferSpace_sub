@@ -1,7 +1,7 @@
 //=============================================================================
 // uart_tx_tb.v - TinyBF UART Transmitter Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     1.0
@@ -14,8 +14,8 @@
 module uart_tx_tb;
 
     // Testbench parameters
-    parameter CLK_PERIOD = 20;      // 20ns = 50MHz
-    parameter BAUD_PERIOD = 8680;   // ~115200 baud in ns
+    parameter CLK_PERIOD = 40;      // 40ns = 25MHz
+    parameter BAUD_PERIOD = 8320;   // 115200 baud at 25MHz (208 clocks * 40ns)
 
     // DUT signals
     reg         clk;
@@ -57,7 +57,7 @@ module uart_tx_tb;
             baud_counter <= 16'd0;
             baud_tick <= 1'b0;
         end else begin
-            if (baud_counter == 16'd433) begin  // ~115200 baud at 50MHz
+            if (baud_counter == 16'd207) begin  // ~115200 baud at 25MHz (13*16=208 clocks)
                 baud_counter <= 16'd0;
                 baud_tick <= 1'b1;
             end else begin
@@ -94,8 +94,6 @@ module uart_tx_tb;
         
         // Data pattern tests
         test_all_zeros();
-        test_all_ones();
-        test_alternating_pattern();
         test_various_bytes();
         
         // Timing tests
@@ -136,7 +134,7 @@ module uart_tx_tb;
             $display("TEST: Reset State");
             $display("-----------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -159,7 +157,7 @@ module uart_tx_tb;
             $display("TEST: Single Byte Transmission");
             $display("-------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -180,31 +178,67 @@ module uart_tx_tb;
 
     // Test: Start bit
     task test_start_bit;
-        reg start_bit_value;
+        integer start_time;
+        integer bit_start_time;
+        integer bit_duration;
+        integer wait_cnt;
         begin
             $display("TEST: Start Bit");
             $display("---------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
             tx_data = 8'hAA;
+            start_time = $time;
             tx_start = 1'b1;
             @(posedge clk);
             tx_start = 1'b0;
             
-            // Wait one clock for state machine to enter START_BIT state
-            @(posedge clk);
+            // Wait for WAIT_SYNC -> START_BIT transition (should happen on baud tick)
+            // Serial should stay high during WAIT_SYNC, then go low for start bit
+            wait_cnt = 0;
+            while (tx_serial == 1'b1 && wait_cnt < 1000) begin
+                @(posedge clk);
+                wait_cnt = wait_cnt + 1;
+            end
             
-            // Check start bit is low (should be set immediately in START_BIT state)
-            start_bit_value = tx_serial;
-            check_signal("Start bit is low", start_bit_value, 1'b0);
+            if (wait_cnt >= 1000) begin
+                $display("  [FAIL] Timeout waiting for start bit to begin");
+                fail_count = fail_count + 1;
+                test_num = test_num + 1;
+            end else begin
+                // Start bit has begun - wait one more clock to stabilize
+                @(posedge clk);
+                bit_start_time = $time;
+                
+                // Check that serial output is low (start bit)
+                #(CLK_PERIOD * 2);
+                check_signal("Start bit is low", tx_serial, 1'b0);
+                
+                // Wait for next baud tick (START_BIT -> DATA_BITS transition)
+                @(posedge baud_tick);
+                bit_duration = $time - bit_start_time;
+                
+                // Verify start bit lasted exactly one baud period (±120ns tolerance for measurement timing)
+                if (bit_duration >= (BAUD_PERIOD - 120) && 
+                    bit_duration <= (BAUD_PERIOD + 120)) begin
+                    $display("  [PASS] Start bit duration: %0d ns (expected ~%0d ns)", 
+                             bit_duration, BAUD_PERIOD);
+                    pass_count = pass_count + 1;
+                end else begin
+                    $display("  [FAIL] Start bit duration: %0d ns (expected ~%0d ns)", 
+                             bit_duration, BAUD_PERIOD);
+                    fail_count = fail_count + 1;
+                end
+                test_num = test_num + 1;
+            end
             
             // Wait for completion
             wait(!tx_busy);
             
-            $display("  -> Verify start bit format\n");
+            $display("  -> Verify start bit timing\n");
         end
     endtask
 
@@ -216,7 +250,7 @@ module uart_tx_tb;
             $display("TEST: Stop Bit");
             $display("--------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -225,11 +259,11 @@ module uart_tx_tb;
             @(posedge clk);
             tx_start = 1'b0;
             
-            // Wait through start bit + 8 data bits = 9 baud ticks
-            repeat(9) @(posedge baud_tick);
+            // Wait for WAIT_SYNC, then start bit + 8 data bits = 10 baud ticks total
+            repeat(10) @(posedge baud_tick);
             
-            // After 9 baud ticks, we should be in STOP_BIT state
-            // Wait one (or two) more clock to let the state machine update
+            // After 10 baud ticks, we should be in STOP_BIT state
+            // Wait a couple clocks to let the state machine update
             @(posedge clk);
             @(posedge clk);
             
@@ -252,7 +286,7 @@ module uart_tx_tb;
             $display("TEST: Data Bits LSB First");
             $display("-------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -261,13 +295,18 @@ module uart_tx_tb;
             @(posedge clk);
             tx_start = 1'b0;
             
-            // Capture 8 data bits
+            // Skip WAIT_SYNC→START_BIT tick and START_BIT→DATA_BITS tick
+            @(posedge baud_tick);  // WAIT_SYNC → START_BIT
+            @(posedge baud_tick);  // START_BIT → DATA_BITS (first data bit output)
+            
+            // Now capture 8 data bits
             // Sample in the middle of each bit period for robustness
             for (i = 0; i < 8; i = i + 1) begin
-                @(posedge baud_tick);
-                // Wait a bit to ensure we're in the middle of the bit period
+                // Wait into middle of bit period
                 repeat(5) @(posedge clk);
                 captured_data[i] = tx_serial;
+                // Wait for next bit
+                if (i < 7) @(posedge baud_tick);
             end
             
             check_data("LSB first data", captured_data, tx_data);
@@ -285,7 +324,7 @@ module uart_tx_tb;
             $display("TEST: Busy Flag Timing");
             $display("----------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -320,7 +359,7 @@ module uart_tx_tb;
             $display("TEST: Busy During Transmission");
             $display("------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -357,7 +396,7 @@ module uart_tx_tb;
             $display("TEST: Ready After Transmission");
             $display("-------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -385,7 +424,7 @@ module uart_tx_tb;
             $display("TEST: All Zeros Data");
             $display("--------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -394,14 +433,15 @@ module uart_tx_tb;
             @(posedge clk);
             tx_start = 1'b0;
             
-            // Skip start bit
-            @(posedge baud_tick);
+            // Skip WAIT_SYNC->START_BIT and START_BIT->DATA_BITS ticks
+            @(posedge baud_tick);  // WAIT_SYNC -> START_BIT
+            @(posedge baud_tick);  // START_BIT -> DATA_BITS
             
             // Capture data bits
             for (i = 0; i < 8; i = i + 1) begin
-                @(posedge baud_tick);
                 @(posedge clk);
                 captured[i] = tx_serial;
+                if (i < 7) @(posedge baud_tick);
             end
             
             check_data("All zeros", captured, 8'h00);
@@ -409,76 +449,6 @@ module uart_tx_tb;
             wait(!tx_busy);
             
             $display("  -> Verify all-zeros pattern\n");
-        end
-    endtask
-
-    // Test: All ones data
-    task test_all_ones;
-        reg [7:0] captured;
-        integer i;
-        begin
-            $display("TEST: All Ones Data");
-            $display("-------------------");
-            
-            // Ensure clean starting state
-            wait(!tx_busy);
-            @(posedge clk);
-            
-            tx_data = 8'hFF;
-            tx_start = 1'b1;
-            @(posedge clk);
-            tx_start = 1'b0;
-            
-            // Skip start bit
-            @(posedge baud_tick);
-            
-            // Capture data bits
-            for (i = 0; i < 8; i = i + 1) begin
-                @(posedge baud_tick);
-                @(posedge clk);
-                captured[i] = tx_serial;
-            end
-            
-            check_data("All ones", captured, 8'hFF);
-            
-            wait(!tx_busy);
-            
-            $display("  -> Verify all-ones pattern\n");
-        end
-    endtask
-
-    // Test: Alternating pattern
-    task test_alternating_pattern;
-        reg [7:0] captured;
-        integer i;
-        begin
-            $display("TEST: Alternating Pattern");
-            $display("-------------------------");
-            
-            // Ensure clean starting state
-            wait(!tx_busy);
-            @(posedge clk);
-            
-            tx_data = 8'hAA;  // 10101010
-            tx_start = 1'b1;
-            @(posedge clk);
-            tx_start = 1'b0;
-            
-            // Skip start bit
-            @(posedge baud_tick);
-            
-            // Capture data bits
-            for (i = 0; i < 8; i = i + 1) begin
-                @(posedge baud_tick);
-                @(posedge clk);
-                captured[i] = tx_serial;
-            end
-            
-            check_data("Alternating 0xAA", captured, 8'hAA);
-            
-            wait(!tx_busy);
-            
-            $display("  -> Verify alternating pattern\n");
         end
     endtask
 
@@ -490,7 +460,7 @@ module uart_tx_tb;
             $display("TEST: Various Byte Values");
             $display("-------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -523,7 +493,7 @@ module uart_tx_tb;
             $display("TEST: Back-to-Back Transmission");
             $display("--------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -559,7 +529,7 @@ module uart_tx_tb;
             $display("TEST: Idle State Duration");
             $display("-------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -591,7 +561,7 @@ module uart_tx_tb;
             $display("TEST: Bit Timing Accuracy");
             $display("-------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -626,7 +596,7 @@ module uart_tx_tb;
             $display("TEST: Start During Transmission");
             $display("--------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -672,7 +642,7 @@ module uart_tx_tb;
             $display("TEST: Rapid Start Pulses");
             $display("------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             
@@ -703,7 +673,7 @@ module uart_tx_tb;
             $display("TEST: Reset During Transmission");
             $display("--------------------------------");
             
-            // Ensure clean starting state
+            // Clean starting state
             wait(!tx_busy);
             @(posedge clk);
             

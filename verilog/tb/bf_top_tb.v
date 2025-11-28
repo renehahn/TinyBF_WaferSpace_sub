@@ -1,7 +1,7 @@
 //=============================================================================
 // bf_top_tb.v - TinyBF System Integration Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-26
 // Version:     7.0
@@ -33,10 +33,10 @@ module bf_top_tb;
     //========================================================================
     parameter ADDR_W = 5;              // 32 program locations
     parameter TAPE_ADDR_W = 4;         // 16 tape cells
-    parameter CLK_FREQ = 50000000;     // 50 MHz
+    parameter CLK_FREQ = 25000000;     // 25 MHz
     parameter BAUD_RATE = 115200;      // UART baud rate
-    parameter CLK_PERIOD = 20;         // 20ns = 50MHz
-    parameter BIT_PERIOD = 434;        // Clocks per UART bit (50MHz / 115200)
+    parameter CLK_PERIOD = 40;         // 40ns = 25MHz
+    parameter BIT_PERIOD = 208;        // Clocks per UART bit (13*16 = 208)
 
     //========================================================================
     // DUT Signals
@@ -615,13 +615,11 @@ module bf_top_tb;
             // Move to middle of start bit
             #(BIT_PERIOD * CLK_PERIOD / 2);
             
-            // Move to first data bit
-            #(BIT_PERIOD * CLK_PERIOD);
-            
             // Sample 8 data bits (LSB first)
             for (i = 0; i < 8; i = i + 1) begin
-                data[i] = uart_tx;
+                // Move to middle of next data bit
                 #(BIT_PERIOD * CLK_PERIOD);
+                data[i] = uart_tx;
             end
             
             // Store received byte

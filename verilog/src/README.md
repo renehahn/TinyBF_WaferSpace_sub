@@ -1,8 +1,8 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# TinyBF - Brainfuck CPU for Tiny Tapeout
+# TinyBF - Brainfuck CPU for GF180 Tapeout
 
-TinyBF is a complete hardware implementation of a Brainfuck interpreter designed for ASIC fabrication through Tiny Tapeout. The design includes a full CPU with UART I/O capabilities, programmable RAM-based instruction storage, and a UART-based program uploader.
+TinyBF is a complete hardware implementation of a Brainfuck interpreter designed for ASIC fabrication through the GF180 tapeout. The design includes a full CPU with UART I/O capabilities, programmable RAM-based instruction storage, and a UART-based program uploader.
 
 ## Features
 
@@ -85,19 +85,10 @@ HALT   End of program
 **Programmability:** This is just the default program. Upload custom Brainfuck programs via UART in programming mode (set `ui[3]` high, send instruction bytes, set `ui[3]` low).
 
 
-## What is Tiny Tapeout?
-
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
-
-To learn more and get started, visit https://tinytapeout.com.
-
 ## Resources
 
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
+- [GF180MCU Documentation](https://gf180mcu-pdk.readthedocs.io/)
+- [Wafer.space GF180 Tapeout](https://wafer.space/)
 
 ## Author
 

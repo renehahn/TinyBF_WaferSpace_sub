@@ -1,7 +1,7 @@
 //=============================================================================
 // control_unit_tb.v - TinyBF Control Unit Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     2.0
@@ -19,7 +19,7 @@ module control_unit_tb;
     parameter INSTR_W = 8;
     parameter CELL_W = 8;
     parameter TAPE_ADDR_W = 3;     // 8 tape cells
-    parameter CLK_PERIOD = 20;
+    parameter CLK_PERIOD = 40;
     
     // State encoding (MUST match control_unit.v binary encoding)
     localparam [3:0] S_IDLE        = 4'd0;
@@ -175,10 +175,11 @@ module control_unit_tb;
             
             // Verify state transitions: FETCH -> WAIT_FETCH -> DECODE -> EXECUTE -> FETCH
             check_state("DP_INC enters FETCH", S_FETCH);
+            // prog_ren is registered and updates on posedge, check after one cycle
+            @(posedge clk);  // State transitions FETCH->WAIT_FETCH, prog_ren becomes active
+            @(negedge clk);  // Stable sample point
             check_signal("DP_INC FETCH: prog_ren", prog_ren, 1'b1);
             check_signal("DP_INC FETCH: prog_raddr", prog_raddr, 3'h0);
-            
-            wait_cycles(1);  // FETCH -> WAIT_FETCH
             check_state("DP_INC enters WAIT_FETCH", S_WAIT_FETCH);
             
             wait_cycles(1);  // WAIT_FETCH -> DECODE
@@ -338,12 +339,9 @@ module control_unit_tb;
             wait_cycles(1);  // FETCH -> WAIT_FETCH
             wait_cycles(1);  // WAIT_FETCH -> DECODE
             check_state("INPUT enters DECODE", S_DECODE);
-            wait_cycles(1);  // DECODE -> READ_CELL
-            check_state("INPUT enters READ_CELL", S_READ_CELL);
-            wait_cycles(1);  // READ_CELL -> WAIT_CELL
-            wait_cycles(1);  // WAIT_CELL -> EXECUTE
+            wait_cycles(1);  // DECODE -> EXECUTE (INPUT does NOT read cell)
             check_state("INPUT enters EXECUTE", S_EXECUTE);
-            wait_cycles(1);  // EXECUTE -> WRITE_CELL
+            wait_cycles(1);  // EXECUTE -> WRITE_CELL (uart_rx_valid=1, so immediate write)
             check_state("INPUT enters WRITE_CELL", S_WRITE_CELL);
             check_signal("INPUT WRITE: tape_wen", tape_wen, 1'b1);
             check_signal("INPUT WRITE: tape_wdata", tape_wdata, 8'h42);
@@ -351,7 +349,7 @@ module control_unit_tb;
             
             uart_rx_valid = 1'b0;  // Clear valid signal
             
-            $display("  -> Verify INPUT follows full state sequence: FETCH->DECODE->READ_CELL->EXECUTE->WRITE_CELL\n");
+            $display("  -> Verify INPUT follows state sequence: FETCH->WAIT_FETCH->DECODE->EXECUTE->WRITE_CELL\n");
         end
     endtask
 
@@ -457,7 +455,9 @@ module control_unit_tb;
             reset_to_known_state(3'd7);
             prog_rdata = 8'b000_00001;
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT_FETCH->DECODE->EXEC->FETCH
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            @(posedge clk);  // EXECUTE->FETCH
+            @(negedge clk);  // Stable sample
             check_state("DP forward wrap enters FETCH", S_FETCH);
             check_signal("DP forward wrap: 7+1", dp_out, 3'd0);
             
@@ -465,7 +465,9 @@ module control_unit_tb;
             reset_to_known_state(3'd0);
             prog_rdata = 8'b001_00001;
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT_FETCH->DECODE->EXEC->FETCH
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            @(posedge clk);  // EXECUTE->FETCH
+            @(negedge clk);  // Stable sample
             check_state("DP backward wrap enters FETCH", S_FETCH);
             check_signal("DP backward wrap: 0-1", dp_out, 3'd7);
             
@@ -484,8 +486,9 @@ module control_unit_tb;
             prog_rdata = 8'b010_00001;  // CELL_INC, arg=1
             tape_rdata = 8'hFF;  // 255
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE
-            check_state("Cell Overflow enters WRITE_CELL", S_WRITE_CELL);
+            wait_cycles(7);  // FETCH->WAIT_FETCH->DEC->READ->WAIT_CELL->EXEC->WRITE->FETCH
+            check_state("Cell Overflow enters FETCH", S_FETCH);
+            // tape_wdata still holds the written value
             check_signal("Cell overflow: 255+1", tape_wdata, 8'h00);
             
             // Underflow: 0 - 1 = 255
@@ -493,7 +496,8 @@ module control_unit_tb;
             prog_rdata = 8'b011_00001;  // CELL_DEC, arg=1
             tape_rdata = 8'h00;  // 0
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE
+            wait_cycles(6);  // FETCH->WAIT_FETCH->DEC->READ->WAIT_CELL->EXEC->WRITE_CELL
+            check_state("Cell Underflow enters WRITE_CELL", S_WRITE_CELL);
             check_signal("Cell underflow: 0-1", tape_wdata, 8'hFF);
             
             $display("  -> Manual check: Verify cell values wrap at 8-bit boundaries\n");
@@ -518,24 +522,34 @@ module control_unit_tb;
             // Instruction 1: DP_INC by 2 (dp: 2->4)
             prog_rdata = 8'b000_00010;
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE (back at FETCH after posedge)
+            @(posedge clk);  // Transition EXECUTE->FETCH
+            @(negedge clk);  // Sample stable FETCH state
             check_state("Prog[1] FETCH", S_FETCH);
             check_signal("Prog[1] DP=4", dp_out, 3'd4);
             check_signal("Prog[1] PC=1", pc_out, 3'd1);
             
             // Instruction 2: CELL_INC by 3 at dp=4 (cell: 5->8)
+            // FSM is in FETCH state, will read prog_rdata next cycle
             prog_rdata = 8'b010_00011;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE
+            // Don't call pulse_start() - let FSM continue!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL
+            wait_cycles(1);  // READ_CELL->WAIT_CELL (tape_rdata will be sampled)
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->WRITE_CELL
+            check_state("Prog[2] WRITE_CELL", S_WRITE_CELL);
             check_signal("Prog[2] tape_wdata=8", tape_wdata, 8'd8);
-            wait_cycles(1);  // WRITE->FETCH
-            check_state("Prog[2] FETCH", S_FETCH);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             check_signal("Prog[2] PC=2", pc_out, 3'd2);
 
             // Instruction 3: DP_DEC by 1 (dp: 4->3)
             prog_rdata = 8'b001_00001;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
+            // Don't call pulse_start() - let FSM continue!
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            @(posedge clk);  // Transition EXECUTE->FETCH
+            @(negedge clk);  // Sample stable FETCH state
             check_state("Prog[3] FETCH", S_FETCH);
             check_signal("Prog[3] DP=3", dp_out, 3'd3);
             check_signal("Prog[3] PC=3", pc_out, 3'd3);
@@ -560,41 +574,66 @@ module control_unit_tb;
             // First iteration: CELL_DEC (3->2) at PC=0
             prog_rdata = 8'b011_00001;  // CELL_DEC by 1
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE->FETCH
+            wait_cycles(6);  // FETCH->WAIT_FETCH->DEC->READ->WAIT_CELL->EXEC->WRITE_CELL
             check_signal("Loop iter1: cell=2", tape_wdata, 8'd2);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             check_signal("Loop iter1: PC=1", pc_out, 3'd1);
             
             // JNZ at PC=1: jump back to PC=0 (offset=-1)
-            tape_rdata = 8'd2;  // Updated cell value
-            prog_rdata = 8'b111_11111;  // JNZ -1 (PC=1, offset=-1 -> target=0)
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->FETCH
+            tape_rdata = 8'd2;  // Updated cell value for JNZ to read
+            prog_rdata = 8'b111_11111;  // JNZ -1 (5-bit signed: 11111=-1, PC=1+(-1)=0)
+            // Don't call pulse_start() - FSM is already running!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL
+            wait_cycles(1);  // READ_CELL->WAIT_CELL
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->FETCH
             check_signal("Loop iter1 JNZ: PC=0", pc_out, 3'd0);  // PC=1+(-1)=0
             
             // Second iteration: CELL_DEC (2->1) at PC=0
             prog_rdata = 8'b011_00001;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // Full CELL_DEC sequence
+            tape_rdata = 8'd2;  // Set tape_rdata BEFORE FSM reads it
+            // FSM is in FETCH, will fetch instruction
+            // Don't call pulse_start()!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL (tape_rdata is already set)
+            wait_cycles(1);  // READ_CELL->WAIT_CELL (samples tape_rdata)
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->WRITE_CELL
             check_signal("Loop iter2: cell=1", tape_wdata, 8'd1);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             
             // JNZ at PC=1: jump back to PC=0
-            tape_rdata = 8'd1;
             prog_rdata = 8'b111_11111;  // JNZ -1
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // Full JNZ sequence
+            // Don't call pulse_start()!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL
+            wait_cycles(1);  // READ_CELL->WAIT_CELL
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->FETCH
             check_signal("Loop iter2 JNZ: PC=0", pc_out, 3'd0);  // PC=1+(-1)=0
             
             // Third iteration: CELL_DEC (1->0)
             prog_rdata = 8'b011_00001;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // Full CELL_DEC sequence
+            tape_rdata = 8'd1;  // Set to value written in iter2 BEFORE FSM reads it
+            // Don't call pulse_start()!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL (tape_rdata already set)
+            wait_cycles(1);  // READ_CELL->WAIT_CELL (samples tape_rdata)
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->WRITE_CELL
             check_signal("Loop iter3: cell=0", tape_wdata, 8'd0);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             
             // JNZ (cell=0, don't jump, exit loop)
             tape_rdata = 8'd0;
             prog_rdata = 8'b111_11111;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(6);  // Full JNZ sequence
+            // Don't call pulse_start()!
+            wait_cycles(6);  // Full JNZ sequence (ends in FETCH)
             check_signal("Loop exit: PC=2", pc_out, 3'd2);  // Exited loop
             
             $display("  -> Verify backward jump creates loop behavior\n");
@@ -648,36 +687,53 @@ module control_unit_tb;
             tape_rdata = 8'd0;
             prog_rdata = 8'b010_01010;  // CELL_INC by 10
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE->FETCH
+            wait_cycles(6);  // FETCH->WAIT->DEC->READ->WAIT->EXEC->WRITE_CELL
             check_signal("Chain[1]: cell[0]=10", tape_wdata, 8'd10);
             check_signal("Chain[1]: dp=0", dp_out, 3'd0);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             
             // 2. DP_INC to 1
             prog_rdata = 8'b000_00001;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
+            // Don't call pulse_start() - FSM is already running!
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            @(posedge clk);  // EXECUTE->FETCH
+            @(negedge clk);  // Stable sample
             check_signal("Chain[2]: dp=1", dp_out, 3'd1);
             
             // 3. CELL_DEC at dp=1 (20->15)
-            tape_rdata = 8'd20;
             prog_rdata = 8'b011_00101;  // CELL_DEC by 5
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // Full CELL_DEC sequence
+            tape_rdata = 8'd20;  // Set tape_rdata BEFORE FSM reads it
+            // Don't call pulse_start()!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL (tape_rdata already set)
+            wait_cycles(1);  // READ_CELL->WAIT_CELL (samples tape_rdata)
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->WRITE_CELL
             check_signal("Chain[3]: cell[1]=15", tape_wdata, 8'd15);
             check_signal("Chain[3]: dp=1", dp_out, 3'd1);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             
             // 4. DP_INC to 2
             prog_rdata = 8'b000_00001;
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
+            // Don't call pulse_start()!
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            @(posedge clk);  // EXECUTE->FETCH
+            @(negedge clk);  // Stable sample
             check_signal("Chain[4]: dp=2", dp_out, 3'd2);
             
             // 5. CELL_INC at dp=2 (7->14)
-            tape_rdata = 8'd7;
             prog_rdata = 8'b010_00111;  // CELL_INC by 7
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(7);  // Full CELL_INC sequence
+            tape_rdata = 8'd7;  // Set tape_rdata BEFORE FSM reads it
+            // Don't call pulse_start()!
+            wait_cycles(1);  // FETCH->WAIT_FETCH
+            wait_cycles(1);  // WAIT_FETCH->DECODE
+            wait_cycles(1);  // DECODE->READ_CELL (tape_rdata already set)
+            wait_cycles(1);  // READ_CELL->WAIT_CELL (samples tape_rdata)
+            wait_cycles(1);  // WAIT_CELL->EXECUTE
+            wait_cycles(1);  // EXECUTE->WRITE_CELL
             check_signal("Chain[5]: cell[2]=14", tape_wdata, 8'd14);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             check_signal("Chain[5]: PC=5", pc_out, 3'd5);
             
             $display("  -> Verify operations on multiple cells with DP movement\n");
@@ -721,7 +777,7 @@ module control_unit_tb;
             uart_rx_byte = 8'hBB;
             prog_rdata = 8'b101_00000;  // INPUT
             pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(3);  // FETCH->WAIT->DEC->WAIT_RX
+            wait_cycles(4);  // FETCH->WAIT_FETCH->DEC->EXEC->WAIT_RX (uart_rx_valid=0)
             check_state("INPUT waits: WAIT_RX", S_WAIT_RX);
             check_signal("INPUT wait: PC=0", pc_out, 3'd0);  // PC should not increment
             
@@ -732,9 +788,10 @@ module control_unit_tb;
             
             // Data arrives
             uart_rx_valid = 1'b1;
-            wait_cycles(4);  // WAIT_RX->READ->WAIT->EXEC->WRITE->FETCH (actually need more)
-            check_state("INPUT completes: FETCH", S_FETCH);
+            wait_cycles(1);  // WAIT_RX->WRITE_CELL
+            check_state("INPUT completes: WRITE_CELL", S_WRITE_CELL);
             check_signal("INPUT complete: tape_wdata=0xBB", tape_wdata, 8'hBB);
+            wait_cycles(1);  // WRITE_CELL->FETCH
             
             uart_rx_valid = 1'b0;
             uart_tx_busy = 1'b0;  // Reset to default
@@ -756,26 +813,33 @@ module control_unit_tb;
             
             reset_to_known_state(3'd0);
             
-            // Execute 7 NOP-equivalent instructions to get PC to 7
-            // We'll use DP_INC with arg=0 as a NOP (doesn't change DP)
-            prog_rdata = 8'b000_00000;  // DP_INC by 0 = NOP
+            // Execute 7 instructions to get PC to 7
+            // Use DP_INC with arg=1 (DP will increment, but that's OK for this test)
+            prog_rdata = 8'b000_00001;  // DP_INC by 1
+            
+            // Start execution once
+            pulse_start();  // Ends at negedge in S_FETCH
             
             // Execute 7 instructions to advance PC from 0 to 7
             for (i = 0; i < 7; i = i + 1) begin
-                pulse_start();  // Ends at negedge in S_FETCH
-                wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
+                // FSM is in FETCH, will execute current instruction
+                wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+                @(posedge clk);  // EXECUTE->FETCH (PC increments)
+                @(negedge clk);  // Stable at FETCH for next iteration
             end
             
-            // Verify we're at PC=7
+            // Verify we're at PC=7 (DP will be 7 too, but we only care about PC)
             check_signal("PC overflow setup: PC=7", pc_out, 3'd7);
             
             // Execute one more instruction - PC should wrap from 7 to 0
-            prog_rdata = 8'b000_00001;  // DP_INC by 1 (to verify it executes)
-            pulse_start();  // Ends at negedge in S_FETCH
-            wait_cycles(4);  // FETCH->WAIT->DEC->EXEC->FETCH
-            check_state("PC overflow: FETCH", S_FETCH);
+            prog_rdata = 8'b000_00001;  // DP_INC by 1 (DP: 7->0 wraps, PC: 7->0 wraps)
+            // Don't call pulse_start() - FSM is already running!
+            wait_cycles(3);  // FETCH->WAIT_FETCH->DECODE->EXECUTE
+            check_state("PC overflow: EXECUTE", S_EXECUTE);
+            @(posedge clk);  // EXECUTE->FETCH (DP and PC update here)
+            @(negedge clk);  // Stable sample
+            check_signal("PC overflow: DP incremented", dp_out, 3'd0);  // DP wrapped 7+1=0
             check_signal("PC wraps: 7->0", pc_out, 3'd0);  // 7+1=0 (wrap)
-            check_signal("PC overflow: DP incremented", dp_out, 3'd1);  // Verify instruction executed
             
             $display("  -> Verify PC wraps at 3-bit boundary\n");
         end

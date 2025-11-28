@@ -1,7 +1,7 @@
 //=============================================================================
 // programmer_tb.v - TinyBF Programmer Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-25
 // Version:     1.0
@@ -33,7 +33,7 @@ module programmer_tb;
     //========================================================================
     parameter INSTR_W = 8;
     parameter ADDR_W = 5;
-    parameter CLK_PERIOD = 20;  // 20ns = 50MHz
+    parameter CLK_PERIOD = 40;  // 40ns = 25MHz
 
     //========================================================================
     // DUT Signals
@@ -199,7 +199,7 @@ module programmer_tb;
         @(posedge clk);
         uart_valid = 0;
         
-        // Check WRITE state (should assert wen with correct data)
+        // Check WRITE state
         @(posedge clk);
         check_value(0, 8'hAB, 1, "Write state");
         

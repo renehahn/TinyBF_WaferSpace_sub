@@ -1,7 +1,7 @@
 //=============================================================================
 // reset_sync_tb.v - TinyBF Reset Synchronizer Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     1.0
@@ -14,7 +14,7 @@
 module reset_sync_tb;
 
     // Testbench parameters
-    parameter CLK_PERIOD = 20;      // 20ns = 50MHz
+    parameter CLK_PERIOD = 40;      // 40ns = 25MHz
     parameter RESET_STAGES = 3;     // Expected number of sync stages
     
     // Test signals
@@ -287,8 +287,7 @@ module reset_sync_tb;
             
             // The pulse should still propagate (async assertion)
             #1;
-            $display("  [INFO] Short pulse creates glitch (expected for async assertion)");
-            $display("  [INFO] This is correct behavior - assertion must be immediate");
+            $display("  [INFO] Short pulse creates glitch (expected)");
             pass_count = pass_count + 1;
             
             #(CLK_PERIOD * 5);
@@ -311,7 +310,7 @@ module reset_sync_tb;
                 #(CLK_PERIOD * 5);
                 
                 if (sync_rst_n === 1'b1) begin
-                    $display("  [PASS] Pulse %0d: Reset properly deasserted", i + 1);
+                    $display("  [PASS] Pulse %0d: Reset deasserted", i + 1);
                     if (i == 0) pass_count = pass_count + 1;
                 end else begin
                     $display("  [FAIL] Pulse %0d: Reset stuck low", i + 1);
@@ -380,7 +379,7 @@ module reset_sync_tb;
                 pass_count = pass_count + 1;
                 test_num = test_num + 1;
             end else begin
-                $display("  [FAIL] Reset incorrectly released");
+                $display("  [FAIL] Reset not released");
                 fail_count = fail_count + 1;
                 test_num = test_num + 1;
             end
@@ -389,7 +388,7 @@ module reset_sync_tb;
             #(CLK_PERIOD * 5);
             
             if (sync_rst_n === 1'b1) begin
-                $display("  [PASS] Reset properly released after long assertion");
+                $display("  [PASS] Reset released after long assertion");
                 pass_count = pass_count + 1;
             end else begin
                 $display("  [FAIL] Reset stuck after long assertion");

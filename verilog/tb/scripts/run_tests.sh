@@ -84,7 +84,8 @@ print_usage() {
     printf "    programmer        - UART program uploader\n"
     printf "    tape_memory       - Tape memory module\n"
     printf "    control_unit      - CPU control unit\n"
-    printf "    bf_top            - Complete Brainfuck system\n\n"
+    printf "    bf_top            - Complete Brainfuck system\n"
+    printf "    rh_bf_top         - GF180 board-level wrapper\n\n"
 }
 
 print_header() {
@@ -151,6 +152,10 @@ get_source_files() {
         bf_top)
             # bf_top requires all modules
             sources="$SRC_DIR/reset_sync.v $SRC_DIR/baud_gen.v $SRC_DIR/uart_tx.v $SRC_DIR/uart_rx.v $SRC_DIR/program_memory.v $SRC_DIR/tape_memory.v $SRC_DIR/control_unit.v $SRC_DIR/programmer.v $SRC_DIR/bf_top.v"
+            ;;
+        rh_bf_top)
+            # rh_bf_top requires all modules (same as bf_top plus wrapper)
+            sources="$SRC_DIR/reset_sync.v $SRC_DIR/baud_gen.v $SRC_DIR/uart_tx.v $SRC_DIR/uart_rx.v $SRC_DIR/program_memory.v $SRC_DIR/tape_memory.v $SRC_DIR/control_unit.v $SRC_DIR/programmer.v $SRC_DIR/bf_top.v $SRC_DIR/rh_bf_top.v"
             ;;
         *)
             # Unknown test, try to find matching source file

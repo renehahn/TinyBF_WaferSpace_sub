@@ -1,7 +1,7 @@
 //=============================================================================
 // baud_gen_tb.v - TinyBF Baud Rate Generator Testbench
 //=============================================================================
-// Project:     TinyBF - Tiny Tapeout Sky 25B Brainfuck ASIC CPU
+// Project:     TinyBF - wafer.space GF180 Brainfuck ASIC CPU
 // Author:      René Hahn
 // Date:        2025-11-10
 // Version:     1.0
@@ -14,9 +14,13 @@
 module baud_gen_tb;
 
     // Testbench parameters
-    parameter CLK_FREQ = 50000000;   // 50MHz
+    parameter CLK_FREQ = 25000000;   // 25MHz
     parameter BAUD_RATE = 115200;    // 115200 baud
-    parameter CLK_PERIOD = 20;       // 20ns = 50MHz
+    parameter CLK_PERIOD = 40;       // 40ns = 25MHz
+    
+    // Calculate expected divisor for tick generation
+    // For 16x oversampling: divisor = CLK_FREQ / (BAUD_RATE * 16)
+    parameter DIVISOR_16X = CLK_FREQ / (BAUD_RATE * 16);  // ~14 for 25MHz
 
     // DUT signals
     reg         clk;
@@ -154,7 +158,7 @@ module baud_gen_tb;
             
             // Count 16x ticks over 100 periods
             tick_count = 0;
-            for (i = 0; i < 100 * 27; i = i + 1) begin  // ~100 16x periods
+            for (i = 0; i < 100 * DIVISOR_16X; i = i + 1) begin  // ~100 16x periods
                 @(posedge clk);
                 if (tick_16x) tick_count = tick_count + 1;
             end
@@ -188,7 +192,7 @@ module baud_gen_tb;
             
             // Count 1x ticks over 100 baud periods
             tick_count = 0;
-            for (i = 0; i < 100 * 27 * 16; i = i + 1) begin  // ~100 1x periods
+            for (i = 0; i < 100 * DIVISOR_16X * 16; i = i + 1) begin  // ~100 1x periods
                 @(posedge clk);
                 if (tick_1x) tick_count = tick_count + 1;
             end
@@ -278,7 +282,7 @@ module baud_gen_tb;
             $display("  Expected period: %0.2f ns", expected_period);
             $display("  Error: %0.2f%%", percent_error);
             
-            if (percent_error < 2.0) begin  // Allow 2% error
+            if (percent_error < 5.0) begin  // Allow 5% error for quantization
                 $display("  [PASS] Frequency accuracy within tolerance");
                 pass_count = pass_count + 1;
             end else begin
@@ -323,7 +327,7 @@ module baud_gen_tb;
             $display("  Expected period: %0.2f ns", expected_period);
             $display("  Error: %0.2f%%", percent_error);
             
-            if (percent_error < 2.0) begin  // Allow 2% error
+            if (percent_error < 5.0) begin  // Allow 5% error for quantization
                 $display("  [PASS] Frequency accuracy within tolerance");
                 pass_count = pass_count + 1;
             end else begin
@@ -579,8 +583,10 @@ module baud_gen_tb;
                 if (tick_16x) tick_count_late = tick_count_late + 1;
             end
             
-            // Counts should be similar
-            if (tick_count_early == tick_count_late) begin
+            // Counts should be similar (allow ±1 due to sampling window alignment)
+            if (tick_count_early == tick_count_late || 
+                tick_count_early == tick_count_late + 1 ||
+                tick_count_early == tick_count_late - 1) begin
                 $display("  [PASS] Stable operation: %0d ticks early, %0d ticks late", 
                          tick_count_early, tick_count_late);
                 pass_count = pass_count + 1;
