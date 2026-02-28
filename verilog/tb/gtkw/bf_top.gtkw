@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Fri Nov 28 16:54:56 2025
+[*] Sat Feb 28 19:33:04 2026
 [*]
 [dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/bf_top_tb.vcd"
-[dumpfile_mtime] "Fri Nov 28 16:54:39 2025"
-[dumpfile_size] 2374125
+[dumpfile_mtime] "Sat Feb 28 19:31:38 2026"
+[dumpfile_size] 3323158
 [savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/bf_top.gtkw"
-[timestart] 1399500000
+[timestart] 1962500000
 [size] 1920 1043
 [pos] -1 -1
-*-27.074358 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-27.060154 2814700000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -37,15 +37,16 @@
 [markername] YY
 [markername] ZZ
 [treeopen] bf_top_tb.
-[treeopen] bf_top_tb.dut.
 [sst_width] 297
-[signals_width] 250
+[signals_width] 201
 [sst_expanded] 1
 [sst_vpaned_height] 304
 @420
 bf_top_tb.test_num
-@28
+bf_top_tb.test_default_program.timeout
+@29
 bf_top_tb.clk
+@28
 bf_top_tb.dut.prog_mode_i
 @200
 -
@@ -88,22 +89,28 @@ bf_top_tb.dut.u_cpu.tape_wen_o
 @28
 [color] 2
 bf_top_tb.dut.u_uart_tx.tx_serial_o
+@2028
+^3 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/uart_tx_state_translate.txt
 bf_top_tb.dut.u_uart_tx.state[2:0]
 @22
 bf_top_tb.dut.u_uart_tx.tx_data_i[7:0]
+[color] 3
 bf_top_tb.dut.u_uart_tx.shift_reg[7:0]
 @28
 bf_top_tb.dut.u_uart_tx.tx_busy_o
 bf_top_tb.dut.u_uart_tx.tx_start_i
 bf_top_tb.dut.u_uart_tx.baud_tick_i
-bf_top_tb.dut.u_uart_tx.clk_i
 @200
 -
 -UART RX
 @28
+[color] 2
 bf_top_tb.dut.u_uart_rx.rx_serial_i
+@2028
+^4 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/uart_rx_state_translate.txt
 bf_top_tb.dut.u_uart_rx.state[1:0]
 @22
+[color] 3
 bf_top_tb.dut.u_uart_rx.rx_data_o[7:0]
 @28
 bf_top_tb.dut.u_uart_rx.rx_valid_o
@@ -154,5 +161,7 @@ bf_top_tb.dut.u_programmer.prog_wen_o
 bf_top_tb.dut.u_baud_gen.tick_1x_o
 bf_top_tb.dut.u_baud_gen.tick_16x_o
 bf_top_tb.dut.u_uart_rx.rx_sync[2:0]
+@420
+bf_top_tb.test_default_program.timeout
 [pattern_trace] 1
 [pattern_trace] 0

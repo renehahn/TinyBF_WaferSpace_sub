@@ -1,0 +1,40 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sat Feb 28 11:10:44 2026
+[*]
+[dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/baud_gen_tb.vcd"
+[dumpfile_mtime] "Sat Feb 28 10:38:53 2026"
+[dumpfile_size] 11445243
+[savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/baud_gen.gtkw"
+[timestart] 0
+[size] 1920 1043
+[pos] -27 -24
+*-20.302694 2060000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] baud_gen_tb.
+[sst_width] 297
+[signals_width] 134
+[sst_expanded] 1
+[sst_vpaned_height] 304
+@28
+baud_gen_tb.dut.clk_i
+baud_gen_tb.dut.rst_i
+@200
+-
+@22
+baud_gen_tb.dut.cnt_16x[3:0]
+@29
+baud_gen_tb.dut.tick_16x_o
+@22
+baud_gen_tb.dut.cnt_1x[3:0]
+@28
+baud_gen_tb.dut.tick_1x_o
+@200
+-
+@420
+baud_gen_tb.test_num
+baud_gen_tb.pass_count
+@28
+baud_gen_tb.test_frequency_accuracy_16x.percent_error
+baud_gen_tb.test_frequency_accuracy_1x.percent_error
+[pattern_trace] 1
+[pattern_trace] 0

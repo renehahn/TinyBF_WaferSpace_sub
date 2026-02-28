@@ -1,20 +1,70 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Sun Nov  9 08:37:55 2025
+[*] Sat Feb 28 11:21:08 2026
 [*]
-[dumpfile] "/foss/designs/TTtemp/tb/uart_tx_tb.vcd"
-[dumpfile_mtime] "Sun Nov  9 08:25:51 2025"
-[dumpfile_size] 2680208
-[savefile] "/foss/designs/TTtemp/tb/gtkw/uart_tx.gtkw"
-[timestart] 0
-[size] 1515 866
-[pos] -1 -1
-*-22.500000 8990000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/uart_tx_tb.vcd"
+[dumpfile_mtime] "Sat Feb 28 11:13:34 2026"
+[dumpfile_size] 1579571
+[savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/uart_tx.gtkw"
+[timestart] 163900000
+[size] 1920 1043
+[pos] -27 -24
+*-26.100000 363500000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
 [treeopen] uart_tx_tb.
 [sst_width] 297
-[signals_width] 443
+[signals_width] 165
 [sst_expanded] 1
-[sst_vpaned_height] 242
+[sst_vpaned_height] 304
+@28
+uart_tx_tb.dut.clk_i
+uart_tx_tb.dut.rst_i
+@200
+-
+@22
+uart_tx_tb.dut.tx_data_i[7:0]
+@28
+uart_tx_tb.dut.tx_start_i
+uart_tx_tb.dut.baud_tick_i
+@200
+-
+@2028
+^1 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/uart_tx_state_translate.txt
+uart_tx_tb.dut.state[2:0]
+@22
+uart_tx_tb.dut.shift_reg[7:0]
+@28
+[color] 2
+uart_tx_tb.dut.tx_serial_o
+uart_tx_tb.dut.tx_busy_o
+@200
+-
+-
 @820
 uart_tx_tb.check_data.test_name[255:0]
 @c00820
@@ -276,22 +326,7 @@ uart_tx_tb.check_signal.test_name[255:0]
 (253)uart_tx_tb.check_signal.test_name[255:0]
 (254)uart_tx_tb.check_signal.test_name[255:0]
 (255)uart_tx_tb.check_signal.test_name[255:0]
-@1401a00
+@1401200
 -group_end
-@28
-uart_tx_tb.dut.clk_i
-uart_tx_tb.dut.rst_i
-uart_tx_tb.dut.tx_busy_o
-@22
-uart_tx_tb.dut.tx_data_i[7:0]
-@28
-[color] 2
-uart_tx_tb.dut.tx_serial_o
-uart_tx_tb.dut.tx_start_i
-uart_tx_tb.dut.state[1:0]
-@22
-uart_tx_tb.dut.shift_reg[7:0]
-@29
-uart_tx_tb.dut.baud_tick_i
 [pattern_trace] 1
 [pattern_trace] 0

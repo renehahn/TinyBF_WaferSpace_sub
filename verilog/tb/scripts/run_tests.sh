@@ -73,6 +73,7 @@ print_usage() {
     printf "    ./run_tests.sh baud_gen                  # Run baud_gen_tb\n"
     printf "    ./run_tests.sh control_unit --wave       # Run and open waveform\n"
     printf "    ./run_tests.sh program_memory -g gtkw/program_memory.gtkw\n"
+    printf "    ./run_tests.sh program_memory_old -w      # Legacy program_memory waveform view\n"
     printf "    ./run_tests.sh --list                    # List available tests\n"
     printf "    ./run_tests.sh --clean --all             # Clean and run all\n\n"
     printf "${BOLD}AVAILABLE TESTS:${NC}\n"
@@ -81,6 +82,7 @@ print_usage() {
     printf "    uart_rx           - UART receiver\n"
     printf "    reset_sync        - Reset synchronizer\n"
     printf "    program_memory    - Program memory (RAM)\n"
+    printf "    program_memory_old- Program memory legacy waveform alias\n"
     printf "    programmer        - UART program uploader\n"
     printf "    tape_memory       - Tape memory module\n"
     printf "    control_unit      - CPU control unit\n"
@@ -114,6 +116,27 @@ print_warning() {
 
 print_info() {
     printf "${CYAN}[INFO]${NC} %s\n" "$1"
+}
+
+resolve_test_alias() {
+    local requested=$1
+    local resolved_test="$requested"
+    local preferred_gtkw=""
+
+    case "$requested" in
+        program_memory)
+            # Default program_memory command should use RAM-focused waveform view
+            resolved_test="program_memory"
+            preferred_gtkw="$GTKW_DIR/program_memory_ram.gtkw"
+            ;;
+        program_memory_old)
+            # Legacy alias: use same testbench but force legacy GTKW view
+            resolved_test="program_memory"
+            preferred_gtkw="$GTKW_DIR/program_memory.gtkw"
+            ;;
+    esac
+
+    echo "$resolved_test|$preferred_gtkw"
 }
 
 #=========================================================================
@@ -216,17 +239,26 @@ list_tests() {
 #=========================================================================
 
 run_single_test() {
-    local test_name=$1
+    local requested_test_name=$1
+    local alias_info
+    alias_info=$(resolve_test_alias "$requested_test_name")
+    local test_name=${alias_info%%|*}
+    local preferred_gtkw=${alias_info#*|}
+
     local test_file=${TESTS[$test_name]}
     
     if [ -z "$test_file" ]; then
-        print_failure "Test '$test_name' not found"
+        print_failure "Test '$requested_test_name' not found"
         return 1
     fi
     
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     
-    print_section "Running: $test_name"
+    if [ "$requested_test_name" != "$test_name" ]; then
+        print_section "Running: $requested_test_name (alias -> $test_name)"
+    else
+        print_section "Running: $test_name"
+    fi
     printf "${NC}File: %s\n" "$test_file"
     printf "Description: %s${NC}\n\n" "${TEST_DESCRIPTIONS[$test_name]}"
     
@@ -261,35 +293,51 @@ run_single_test() {
     
     # Execution phase
     print_info "Executing simulation..."
+    local marker="$RESULTS_DIR/.vcd_marker_${requested_test_name}_$$"
+    : > "$marker"
+
     if vvp "$test_binary" 2>&1 | tee "$run_log"; then
         local vvp_status=${PIPESTATUS[0]}
         # Check for test failures in output
         if grep -q "FAIL" "$run_log" || [ $vvp_status -ne 0 ]; then
-            print_failure "$test_name - Simulation errors or test failures detected"
+            print_failure "$requested_test_name - Simulation errors or test failures detected"
             FAILED_TESTS=$((FAILED_TESTS + 1))
-            FAILED_TEST_NAMES+=("$test_name")
+            FAILED_TEST_NAMES+=("$requested_test_name")
         else
             local end=$(date +%s%N)
             local duration=$(( (end - start) / 1000000 ))
-            print_success "$test_name completed in ${duration}ms"
+            print_success "$requested_test_name completed in ${duration}ms"
             PASSED_TESTS=$((PASSED_TESTS + 1))
-            PASSED_TEST_NAMES+=("$test_name")
+            PASSED_TEST_NAMES+=("$requested_test_name")
         fi
     else
-        print_failure "$test_name - Simulation crashed"
+        print_failure "$requested_test_name - Simulation crashed"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$test_name")
+        FAILED_TEST_NAMES+=("$requested_test_name")
     fi
     
-    # Check for VCD file in results directory
-    local vcd_file="$RESULTS_DIR/${test_name}_tb.vcd"
+    # Check for VCD file generated during this run (avoid stale files)
+    local vcd_file=""
+    vcd_file=$(find "$RESULTS_DIR" -maxdepth 1 -name "*.vcd" -newer "$marker" -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+    rm -f "$marker"
+
+    # Fallback for testbenches that follow conventional naming
+    if [ -z "$vcd_file" ]; then
+        local fallback_vcd="$RESULTS_DIR/${test_name}_tb.vcd"
+        if [ -f "$fallback_vcd" ]; then
+            vcd_file="$fallback_vcd"
+        fi
+    fi
+
     if [ -f "$vcd_file" ]; then
         print_info "Waveform saved: $vcd_file"
         
         # Open GTKWave if requested
         if [ $OPEN_WAVE -eq 1 ]; then
-            open_gtkwave "$test_name" "$vcd_file"
+            open_gtkwave "$requested_test_name" "$vcd_file" "$preferred_gtkw"
         fi
+    else
+        print_warning "No VCD produced for this run"
     fi
     
     printf "\n"
@@ -303,6 +351,7 @@ run_single_test() {
 open_gtkwave() {
     local test_name=$1
     local vcd_file=$2
+    local preferred_gtkw=$3
     
     if ! command -v gtkwave &> /dev/null; then
         print_warning "GTKWave not installed, skipping waveform viewer"
@@ -330,6 +379,7 @@ open_gtkwave() {
     # Check if .gtkw file exists
     local gtkw_candidates=(
         "$GTKW_FILE"
+        "$preferred_gtkw"
         "$GTKW_DIR/${test_name}.gtkw"
         "$GTKW_DIR/${test_name}_tb.gtkw"
     )

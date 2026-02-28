@@ -1,0 +1,26 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sat Feb 28 18:13:37 2026
+[*]
+[dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/reset_sync_tb.vcd"
+[dumpfile_mtime] "Sat Feb 28 18:08:15 2026"
+[dumpfile_size] 8602
+[savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/reset_sync.gtkw"
+[timestart] 267600
+[size] 1920 1043
+[pos] -27 -24
+*-17.055986 540000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] reset_sync_tb.
+[sst_width] 297
+[signals_width] 198
+[sst_expanded] 1
+[sst_vpaned_height] 304
+@28
+reset_sync_tb.dut.clk_i
+[color] 3
+reset_sync_tb.dut.async_rst_i
+reset_sync_tb.dut.reset_sync_chain[2:0]
+[color] 2
+reset_sync_tb.dut.sync_rst_o
+[pattern_trace] 1
+[pattern_trace] 0

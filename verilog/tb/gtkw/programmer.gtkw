@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Wed Nov 26 16:21:51 2025
+[*] Sat Feb 28 17:56:38 2026
 [*]
-[dumpfile] "/foss/designs/TinyBF/tb/results/programmer_tb.vcd"
-[dumpfile_mtime] "Wed Nov 26 16:20:45 2025"
-[dumpfile_size] 19903
-[savefile] "/foss/designs/TinyBF/tb/gtkw/programmer.gtkw"
-[timestart] 4482000
+[dumpfile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/results/programmer_tb.vcd"
+[dumpfile_mtime] "Sat Feb 28 17:42:11 2026"
+[dumpfile_size] 20133
+[savefile] "/foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/programmer.gtkw"
+[timestart] 0
 [size] 1898 1027
 [pos] -1 -1
-*-18.299999 6450000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-18.714108 13140000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -38,32 +38,37 @@
 [markername] ZZ
 [treeopen] programmer_tb.
 [sst_width] 297
-[signals_width] 192
+[signals_width] 166
 [sst_expanded] 1
 [sst_vpaned_height] 299
-@820
-programmer_tb.check_value.test_name[255:0]
-@420
-programmer_tb.test_num
 @28
 programmer_tb.dut.rst_i
 programmer_tb.dut.clk_i
-@22
-programmer_tb.dut.addr[4:0]
-@28
-programmer_tb.dut.state[1:0]
-@22
-programmer_tb.dut.data_reg[7:0]
+@200
+-
 @28
 programmer_tb.dut.prog_mode_i
 @22
+[color] 3
 programmer_tb.dut.uart_data_i[7:0]
 @28
+[color] 3
 programmer_tb.dut.uart_valid_i
-programmer_tb.dut.prog_busy_o
+@200
+-
+@2028
+^1 /foss/designs/TinyBF_WaferSpace_sub/verilog/tb/gtkw/programmer_state_translate.txt
+programmer_tb.dut.state[1:0]
+@200
+-
 @22
+[color] 2
 programmer_tb.dut.prog_wdata_o[7:0]
+[color] 2
+programmer_tb.dut.prog_waddr_o[4:0]
 @28
+[color] 2
 programmer_tb.dut.prog_wen_o
+programmer_tb.dut.prog_busy_o
 [pattern_trace] 1
 [pattern_trace] 0
